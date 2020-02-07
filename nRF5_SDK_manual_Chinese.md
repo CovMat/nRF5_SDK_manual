@@ -11,17 +11,28 @@ $(SDK_PATH)\modules\nrfx
 $(SDK_PATH)\modules\nrfx\templates\nRF52840
 $(SDK_PATH)\modules\nrfx\templates
 $(SDK_PATH)\modules\nrfx\drivers\include
+$(SDK_PATH)\components\libraries\util
+$(SDK_PATH)\components\libraries\log
+$(SDK_PATH)\components\libraries\log\src
+$(SDK_PATH)\components\libraries\strerror
+$(SDK_PATH)\components\libraries\experimental_section_vars
+$(SDK_PATH)\components\softdevice\s140\headers
 ```
 在代码中，按需添加以下头文件：  
 ```
 #include <nrf_gpio.h> // GPIO操作
 #include <nrfx_gpiote.h> // GPIOTE组件库
+#include <sdk_errors.h> // debug查错相关
+#include <app_error.h> // debug查错相关
 ```
 
 # 需要手动添加的库文件
 可以按需添加以下库文件：
 ```
 modules\nrfx\drivers\src\nrfx_gpiote.c (GPIOTE组件库)
+components\libraries\util\app_error.c (debug查错组件库)
+components\libraries\util\app_error_weak.c (debug查错组件库)
+components\libraries\util\app_error_handler_gcc.c (debug查错组件库，如果是Keil和IAR则要使用另外的c文件)
 ```
 
 
@@ -65,7 +76,7 @@ modules\nrfx\drivers\src\nrfx_gpiote.c (GPIOTE组件库)
 用法：使用GPIOTE驱动组件库时，需要在最开始使用这个函数进行初始化。它会将中断类型设置为PORT中断，优先度设置为低。
 ```
 ret_code_t err_code;
-err_code = nrf_drv_gpiote_init();
+err_code = nrfx_gpiote_init();
 ```
 ## nrfx_gpiote_in_init
 函数原型：
@@ -76,17 +87,22 @@ nrfx_err_t nrfx_gpiote_in_init(nrfx_gpiote_pin_t               pin,
 ```
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
 库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
-用法：使用GPIOTE驱动组件库时，用这个函数启用某个具体的管脚为GPIOTE触发管脚。例如
+用法：使用GPIOTE驱动组件库时，用这个函数初始化某个具体的管脚为GPIOTE触发管脚。例如
 ```
 err_code = nrfx_gpiote_in_init(11, &in_config, in_pin_handler);
 ```
-表示启用11号管脚为GPIOTE触发管脚，管脚相关设置为`in_config`。而`in_pin_handler`是自定义的函数，当中断触发时，执行这个函数的代码
+表示初始化11号管脚为GPIOTE触发管脚，管脚相关设置为`in_config`。而`in_pin_handler`是自定义的函数，当中断触发时，执行这个函数的代码
 ```
 void in_pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) // 中断触发时传入的参数
 {
 
 }
 ```
+## nrfx_gpiote_in_event_enable
+函数原型：`void nrfx_gpiote_in_event_enable(nrfx_gpiote_pin_t pin, bool int_enable)`  
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
+用法：使用GPIOTE驱动组件库时，用这个函数启用某个具体的管脚为GPIO触发管脚。例如`nrfx_gpiote_in_event_enable(11,true)`，表示启用第11号管脚。第二个参数必须是`true`。
 
 
 # 变量类型
