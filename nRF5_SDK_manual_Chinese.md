@@ -8,8 +8,7 @@ SDK_PATH=C:\Users\chenxh\Downloads\nRF5_SDK_16.0.0_98a08e2
 ```
 $(SDK_PATH)\modules\nrfx\hal
 $(SDK_PATH)\modules\nrfx
-$(SDK_PATH)\modules\nrfx\templates\nRF52840
-$(SDK_PATH)\modules\nrfx\templates
+$(SDK_PATH)\integration\nrfx
 $(SDK_PATH)\modules\nrfx\drivers\include
 $(SDK_PATH)\components\libraries\util
 $(SDK_PATH)\components\libraries\log
@@ -34,6 +33,11 @@ components\libraries\util\app_error.c (debug查错组件库)
 components\libraries\util\app_error_weak.c (debug查错组件库)
 components\libraries\util\app_error_handler_gcc.c (debug查错组件库，如果是Keil和IAR则要使用另外的c文件)
 ```
+
+# SDK使用中的一些坑
+## 新版芯片外设驱动nrfx
+SDK14及以前版本SDK使用nrf_drv老版本外设驱动（又称legacy），SDK15及其以后版本使用nrfx新版本外设驱动。根据官方文档的描述，如果想使用新版nrfx驱动，必须将`sdk_config.h`文件中与`nrf_drv_*`相关的设置全部删除。注意把这些设置改为0是没用的，必须删除才有效果。  
+官方文档对这一注意事项的描述：https://infocenter.nordicsemi.com/index.jsp -> Software Development Kit -> nRF5 SDK v16.0.0 -> Hardware Drivers -> Migration guide for nrfx drivers -> Migrate nrf_drv to nrfx drivers
 
 
 # 函数
@@ -65,10 +69,8 @@ components\libraries\util\app_error_handler_gcc.c (debug查错组件库，如果
 函数原型：`uint32_t nrf_gpio_pin_read(uint32_t pin_number)`  
 头文件位置：`modules\nrfx\hal\nrf_gpio.h`  
 用法：当`pin_number`是GPIO输入管脚时，读取电平。返回值1为高电平，0为低电平。
-## sd_nvic_EnableIRQ
-函数原型：`uint32_t sd_nvic_EnableIRQ(IRQn_Type IRQn);`  
-头文件位置：`components\softdevice\s140\headers\nrf_nvic.h`  
-用法：用来启用中断。这个函数相当于`NVIC_EnableIRQ`。它的参数一般使用常量`GPIOTE_IRQn`（GPIOTE）等。
+## NVIC_EnableIRQ
+用法：用来启用中断。它的参数一般使用常量`GPIOTE_IRQn`（GPIOTE）等，例如`NVIC_EnableIRQ(GPIOTE_IRQn);`
 ## nrfx_gpiote_init
 函数原型：`nrfx_err_t nrfx_gpiote_init(void)`  
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
@@ -98,11 +100,34 @@ void in_pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) // 中�
 
 }
 ```
+## nrfx_gpiote_out_init
+函数原型：
+```
+nrfx_err_t nrfx_gpiote_out_init(nrfx_gpiote_pin_t                pin,
+                                nrfx_gpiote_out_config_t const * p_config)
+```
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
+用法：使用GPIOTE驱动组件库时，用这个函数初始化某个具体的管脚为GPIOTE任务管脚。例如
+```
+nrfx_gpiote_out_init(15, &config);
+```
+表示初始化15号管脚为GPIOTE任务管脚，管脚相关设置为`config`。
 ## nrfx_gpiote_in_event_enable
 函数原型：`void nrfx_gpiote_in_event_enable(nrfx_gpiote_pin_t pin, bool int_enable)`  
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
 库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
 用法：使用GPIOTE驱动组件库时，用这个函数启用某个具体的管脚为GPIO触发管脚。例如`nrfx_gpiote_in_event_enable(11,true)`，表示启用第11号管脚。第二个参数必须是`true`。
+## nrfx_gpiote_out_task_enable
+函数原型：`void nrfx_gpiote_out_task_enable(nrfx_gpiote_pin_t pin)`  
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
+用法：使用GPIOTE驱动组件库时，用这个函数启用某个具体的管脚为GPIO任务管脚。
+## nrfx_gpiote_out_task_trigger
+函数原型：`void nrfx_gpiote_out_task_trigger(nrfx_gpiote_pin_t pin)`  
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
+用法：使用GPIOTE驱动组件库时，用这个函数手动触发某个任务管脚。
 
 
 # 变量类型
@@ -112,6 +137,9 @@ void in_pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) // 中�
 ## nrfx_gpiote_in_config_t
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
 用法：用来定义GPIOTE输入参数变量，实际应用中一般和`NRFX_GPIOTE_CONFIG_IN_SENSE_LOTOHI`，`NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO`，`NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE`这三个宏配合使用。
+## nrfx_gpiote_out_config_t
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+用法：用来定义GPIOTE输出参数变量，实际应用中一般和`NRFX_GPIOTE_CONFIG_OUT_TASK_LOW`，`NRFX_GPIOTE_CONFIG_OUT_TASK_HIGH`,`NRFX_GPIOTE_CONFIG_OUT_TASK_TOGGLE`这三个宏配合使用。
 
 
 # 宏与常量
@@ -146,6 +174,17 @@ nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(false);
 ```
 这三个宏分别表示将GPIOTE输入的触发方式设置为：低电平->高电平，高电平->低电平，高低之间变化。  
 后面的`true`表示使用高精度的EVENTS_IN中断（功耗高），`false`表示使用低精度的EVENTS_PORT中断（功耗低）。
+## NRFX_GPIOTE_CONFIG_OUT_TASK_LOW
+## NRFX_GPIOTE_CONFIG_OUT_TASK_HIGH
+## NRFX_GPIOTE_CONFIG_OUT_TASK_TOGGLE(init_high)
+头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
+用法：一般用来初始化GPIOTE输出参数变量，例如
+```
+nrfx_gpiote_out_config_t config = NRFX_GPIOTE_CONFIG_OUT_TASK_TOGGLE(true);
+nrfx_gpiote_out_config_t config = NRFX_GPIOTE_CONFIG_OUT_TASK_LOW;
+```
+这三个宏分别表示将GPIOTE的输出任务模式设置为：低电平输出，高电平输出，电平翻转输出。  
+`init_high=true`表示初始化为高电平，`init_high=false`表示初始化为低电平。
 
 
 # 中断向量表定义的中断程序
