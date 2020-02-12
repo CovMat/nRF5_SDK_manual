@@ -145,6 +145,10 @@ nrfx_gpiote_out_init(15, &config);
 # 宏与常量
 ## NRF_GPIOTE
 用法：这个常量定义了GPIOTE相关寄存器的基地址（nRF52840芯片中这个基地址为`0x40006000`）。在实际应用中，一般使用`NRF_GPIOTE->CONFIG[0]`这样的方法，在基地址的基础上加上`CONFIG[0]`偏移量，计算出每个具体寄存器的地址。  
+## NRF_CLOCK
+用法：这个常量定义了时钟晶振相关寄存器的基地址（nRF52840芯片中这个基地址为`0x40000000`）。在实际应用中，一般使用`NRF_CLOCK->EVENTS_HFCLKSTARTED`这样的方法，在基地址的基础上加上`EVENTS_HFCLKSTARTED`偏移量，计算出每个具体寄存器的地址。  
+## NRF_TIMER0 NRF_TIMER1 NRF_TIMER2 NRF_TIMER3 NRF_TIMER4
+用法：这几个常量定义了计时器TIMER相关的寄存器的基地址。在nRF52840手册的`6.30.5 Registers`小节中能查阅到各个寄存器的详情。
 ## GPIOTE_CONFIG_POLARITY_LoToHi
 用法：这个常量定义了GPIOTE中断的触发条件，低电平变化到高电平的上升缘触发。实际应用中，一般使用`GPIOTE_CONFIG_POLARITY_LoToHi << GPIOTE_CONFIG_POLARITY_Pos`将这个值偏移到对应的位，再赋值给`CONFIG[0-7]`寄存器。
 ## GPIOTE_CONFIG_POLARITY_HiToLo
