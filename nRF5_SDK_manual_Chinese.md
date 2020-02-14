@@ -8,27 +8,44 @@ SDK_PATH=C:\Users\chenxh\Downloads\nRF5_SDK_16.0.0_98a08e2
 ```
 $(SDK_PATH)\modules\nrfx\hal
 $(SDK_PATH)\modules\nrfx
-$(SDK_PATH)\integration\nrfx
 $(SDK_PATH)\modules\nrfx\drivers\include
+$(SDK_PATH)\modules\nrfx\drivers\src\prs
+$(SDK_PATH)\integration\nrfx
 $(SDK_PATH)\components\libraries\util
 $(SDK_PATH)\components\libraries\log
 $(SDK_PATH)\components\libraries\log\src
 $(SDK_PATH)\components\libraries\strerror
 $(SDK_PATH)\components\libraries\experimental_section_vars
+$(SDK_PATH)\components\libraries\uart
+$(SDK_PATH)\components\libraries\fifo
 $(SDK_PATH)\components\softdevice\s140\headers
+$(SDK_PATH)\integration\nrfx\legacy
 ```
 在代码中，按需添加以下头文件：  
 ```
+#include <stdint.h>
+#include <stdbool.h>
 #include <nrf_gpio.h> // GPIO操作
 #include <nrfx_gpiote.h> // GPIOTE组件库
+#include <nrfx_timer.h>　// 计时器组件库
 #include <sdk_errors.h> // debug查错相关
 #include <app_error.h> // debug查错相关
+#include <app_uart.h>　// 串口UART相关
 ```
 
 # 需要手动添加的库文件
 可以按需添加以下库文件：
 ```
 modules\nrfx\drivers\src\nrfx_gpiote.c (GPIOTE组件库)
+modules\nrfx\drivers\src\nrfx_timer.c (计时器组件库)
+modules\nrfx\drivers\src\prs\nrfx_prs.c (外设资源共享库，UART，UARTE必需)
+modules\nrfx\drivers\src\nrfx_uart.c (UART串口库)
+modules\nrfx\drivers\src\nrfx_uarte.c (UARTE串口库)
+components\libraries\uart\app_uart_fifo.c (UART应用FIFO驱动库)
+components\libraries\uart\retarget.c (串口重定义文件)
+components\libraries\util\app_util_platform.c (UART需要)
+integration\nrfx\legacy\nrf_drv_uart.c (老版本UART窗口驱动库)
+components\libraries\fifo\app_fifo.c (应用FIFO的驱动库)
 components\libraries\util\app_error.c (debug查错组件库)
 components\libraries\util\app_error_weak.c (debug查错组件库)
 components\libraries\util\app_error_handler_gcc.c (debug查错组件库，如果是Keil和IAR则要使用另外的c文件)
@@ -128,6 +145,49 @@ nrfx_gpiote_out_init(15, &config);
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
 库文件位置：`modules\nrfx\drivers\src\nrfx_gpiote.c`  
 用法：使用GPIOTE驱动组件库时，用这个函数手动触发某个任务管脚。
+## nrfx_timer_init
+函数原型：
+```
+nrfx_err_t nrfx_timer_init(nrfx_timer_t const * const  p_instance,
+                           nrfx_timer_config_t const * p_config,
+                           nrfx_timer_event_handler_t  timer_event_handler);
+```
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_timer.c`  
+用法：使用定时器组件库的时候，用这个函数来初始化某个定时器。`timer_event_handler`是自定义的函数，当定时结束的时候，触发执行这个函数的代码。
+```
+void timer_event_handler(nrf_timer_event_t event_type, void* p_context){
+
+}
+```
+## nrfx_timer_ms_to_ticks
+函数原型：
+```
+uint32_t nrfx_timer_ms_to_ticks(nrfx_timer_t const * const p_instance,
+                                uint32_t                   timer_ms)
+```
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+用法：用来计算在某个计时器配置下，某段时间相当于晶振振荡多少次。`p_instance`是指向某个计时器地址的指针，`timer_ms`则是时间长度，单位毫秒。函数返回晶振的振荡次数。
+## nrfx_timer_extended_compare
+函数原型：
+```
+void nrfx_timer_extended_compare(nrfx_timer_t const * const p_instance,
+                                 nrf_timer_cc_channel_t     cc_channel,
+                                 uint32_t                   cc_value,
+                                 nrf_timer_short_mask_t     timer_short_mask,
+                                 bool                       enable_int);
+```
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_timer.c`  
+用法：用来设置计时器的比较通道。`p_instance`是指向某个计时器地址的指针。`cc_channel`设置为某个比较通道，例如`NRF_TIMER_CC_CHANNEL0`。`cc_value`为比较值，当计时器的振荡次数等于该值的时候，触发。`timer_short_mask`一般设置为`NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK`或`NRF_TIMER_SHORT_COMPARE0_STOP_MASK`。前者表示触发的时候，计时器清零，从头开始计时。后者表示触发的时候，停止计时。最后一项一般设置为`true`,表示用中断的方式触发。
+## nrfx_timer_enable
+函数原型：
+```
+void nrfx_timer_enable(nrfx_timer_t const * const p_instance)
+```
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+库文件位置：`modules\nrfx\drivers\src\nrfx_timer.c`  
+用法：用来启动计时器。`p_instance`是指向某个计时器地址的指针。
 
 
 # 变量类型
@@ -140,6 +200,15 @@ nrfx_gpiote_out_init(15, &config);
 ## nrfx_gpiote_out_config_t
 头文件位置：`modules\nrfx\drivers\include\nrfx_gpiote.h`  
 用法：用来定义GPIOTE输出参数变量，实际应用中一般和`NRFX_GPIOTE_CONFIG_OUT_TASK_LOW`，`NRFX_GPIOTE_CONFIG_OUT_TASK_HIGH`,`NRFX_GPIOTE_CONFIG_OUT_TASK_TOGGLE`这三个宏配合使用。
+## nrfx_timer_t
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+用法：在使用计时器组件时，需要定义一个这个类型的计时器变量。实际中一般和`NRFX_TIMER_INSTANCE`这个宏配合使用。
+## nrfx_timer_config_t
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+用法：用来定义计时器组件的配置变量，实际应用中一般和`NRFX_TIMER_DEFAULT_CONFIG`这个宏配合使用。
+## app_uart_comm_params_t
+头文件位置：`components\libraries\uart\app_uart.h`  
+用法：这是一个结构体变量，用来定义UART使用的配置变量。
 
 
 # 宏与常量
@@ -189,6 +258,21 @@ nrfx_gpiote_out_config_t config = NRFX_GPIOTE_CONFIG_OUT_TASK_LOW;
 ```
 这三个宏分别表示将GPIOTE的输出任务模式设置为：低电平输出，高电平输出，电平翻转输出。  
 `init_high=true`表示初始化为高电平，`init_high=false`表示初始化为低电平。
+## NRFX_TIMER_INSTANCE(id)
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+用法：用来初始化计时器变量。`id`表示使用哪个计时器。
+## NRFX_TIMER_DEFAULT_CONFIG
+头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
+用法：用来初始化计时器组件的配置变量。初始值由`sdk_config.h`中的设置决定。注意需要仔细估计振荡次数的计数值，选择合适的位宽和频率。如果位宽和频率选择不正确，则无法正确计数。
+## APP_UART_FIFO_INIT
+头文件位置：`components\libraries\uart\app_uart.h`  
+用法：这个宏用来初始化UART功能，它需要带6个参数：  
+1. `app_uart_comm_params_t`所定义的变量的地址  
+2. RX缓冲区的大小，参考值`256`  
+3. TX缓冲区的大小，参考值`256`  
+4. 出错时跳转的函数，填写一个自定义的函数名。出错时会跳转到这个函数执行代码。如果不想使用可以填`NULL`。  
+5. UART中断的优先级，填写枚举变量`app_irq_priority_t`所规定的几个值之一。参考值`APP_IRQ_PRIORITY_LOWEST`。
+6. `uint32_t err_code`变量`err_code`，用于出错时返回错误码。
 
 
 # 中断向量表定义的中断程序
