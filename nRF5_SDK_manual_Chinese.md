@@ -18,6 +18,8 @@ $(SDK_PATH)\components\libraries\strerror
 $(SDK_PATH)\components\libraries\experimental_section_vars
 $(SDK_PATH)\components\libraries\uart
 $(SDK_PATH)\components\libraries\fifo
+$(SDK_PATH)\components\libraries\memobj
+$(SDK_PATH)\components\libraries\balloc
 $(SDK_PATH)\components\softdevice\s140\headers
 $(SDK_PATH)\integration\nrfx\legacy
 ```
@@ -42,13 +44,13 @@ modules\nrfx\drivers\src\prs\nrfx_prs.c (外设资源共享库，UART，UARTE必
 modules\nrfx\drivers\src\nrfx_uart.c (UART串口库)
 modules\nrfx\drivers\src\nrfx_uarte.c (UARTE串口库)
 components\libraries\uart\app_uart_fifo.c (UART应用FIFO驱动库)
-components\libraries\uart\retarget.c (串口重定义文件)
+components\libraries\uart\retarget.c (UART需要，串口重定义文件)
 components\libraries\util\app_util_platform.c (UART需要)
-integration\nrfx\legacy\nrf_drv_uart.c (老版本UART窗口驱动库)
-components\libraries\fifo\app_fifo.c (应用FIFO的驱动库)
-components\libraries\util\app_error.c (debug查错组件库)
-components\libraries\util\app_error_weak.c (debug查错组件库)
-components\libraries\util\app_error_handler_gcc.c (debug查错组件库，如果是Keil和IAR则要使用另外的c文件)
+integration\nrfx\legacy\nrf_drv_uart.c (UART需要，老版本UART窗口驱动库)
+components\libraries\util\app_error_weak.c (UART需要，debug查错组件库)
+components\libraries\fifo\app_fifo.c (UART需要，应用FIFO的驱动库)
+components\libraries\util\app_error.c (UART需要，debug查错组件库)
+components\libraries\util\app_error_handler_gcc.c (UART需要，debug查错组件库，如果是Keil和IAR则要使用另外的c文件)
 ```
 
 # SDK使用中的一些坑
@@ -188,6 +190,11 @@ void nrfx_timer_enable(nrfx_timer_t const * const p_instance)
 头文件位置：`modules\nrfx\drivers\include\nrfx_timer.h`  
 库文件位置：`modules\nrfx\drivers\src\nrfx_timer.c`  
 用法：用来启动计时器。`p_instance`是指向某个计时器地址的指针。
+## app_uart_get
+头文件位置：`components\libraries\uart\app_uart.h`  
+库文件位置：`components\libraries\uart\app_uart_fifo.c`  
+函数原型：`uint32_t app_uart_get(uint8_t * p_byte);`  
+用法：用于从UART接受区的缓冲中读取一个字节的数据。`p_byte`是字符型变量的地址。
 
 
 # 变量类型
@@ -208,7 +215,11 @@ void nrfx_timer_enable(nrfx_timer_t const * const p_instance)
 用法：用来定义计时器组件的配置变量，实际应用中一般和`NRFX_TIMER_DEFAULT_CONFIG`这个宏配合使用。
 ## app_uart_comm_params_t
 头文件位置：`components\libraries\uart\app_uart.h`  
-用法：这是一个结构体变量，用来定义UART使用的配置变量。
+用法：这是一个结构体变量，用来定义UART使用的配置变量。注意它的最后一个参数`baud_rate`不能直接填写整数，而是应该在枚举变量`nrf_uart_baudrate_t`的各个取值中选择一个填写。
+## app_uart_evt_t
+## app_uart_evt_type_t
+头文件位置：`components\libraries\uart\app_uart.h`  
+用法：`app_uart_evt_t`是结构体变量，`app_uart_evt_t->evt_type`的变量类型是`app_uart_evt_type_t`。这是一个枚举变量，指示了UART中断事件的类型。
 
 
 # 宏与常量
@@ -270,7 +281,7 @@ nrfx_gpiote_out_config_t config = NRFX_GPIOTE_CONFIG_OUT_TASK_LOW;
 1. `app_uart_comm_params_t`所定义的变量的地址  
 2. RX缓冲区的大小，参考值`256`  
 3. TX缓冲区的大小，参考值`256`  
-4. 出错时跳转的函数，填写一个自定义的函数名。出错时会跳转到这个函数执行代码。如果不想使用可以填`NULL`。  
+4. UART中断回调处理函数，当UART触发事件时会进入这个函数。必须编写这个函数的代码，否则UART工作不正常。  
 5. UART中断的优先级，填写枚举变量`app_irq_priority_t`所规定的几个值之一。参考值`APP_IRQ_PRIORITY_LOWEST`。
 6. `uint32_t err_code`变量`err_code`，用于出错时返回错误码。
 
