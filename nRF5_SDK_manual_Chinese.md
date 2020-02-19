@@ -195,6 +195,24 @@ void nrfx_timer_enable(nrfx_timer_t const * const p_instance)
 库文件位置：`components\libraries\uart\app_uart_fifo.c`  
 函数原型：`uint32_t app_uart_get(uint8_t * p_byte);`  
 用法：用于从UART接受区的缓冲中读取一个字节的数据。`p_byte`是字符型变量的地址。
+## app_timer_create
+头文件位置：`components\libraries\timer\app_timer.h`  
+库文件位置：`components\libraries\timer\app_timer.c`  
+函数原型：
+```
+ret_code_t app_timer_create(app_timer_id_t const *      p_timer_id,
+                            app_timer_mode_t            mode,
+                            app_timer_timeout_handler_t timeout_handler);
+```
+用法：用来创建一个计时器。  
+1. 在`main.c`中，定义一个计时器变量`APP_TIMER_DEF(m_timer_id);`。这个定义变量的宏要写在函数外面，定义成一个全局变量。函数的第一个参数就是这个变量的地址`&m_timer_id`。  
+2. 第二个参数只能填写枚举变量的两个取值之一：`APP_TIMER_MODE_SINGLE_SHOT`或`APP_TIMER_MODE_REPEATED`。前者只计时一次，后者可以重复计时。  
+3. 第三个则是计时器超时中断处理函数的函数名，即计时时间到后，需要执行的代码。函数的内容需要另外定义。
+## app_timer_start
+头文件位置：`components\libraries\timer\app_timer.h`  
+库文件位置：`components\libraries\timer\app_timer.c`  
+函数原型：`ret_code_t app_timer_start(app_timer_id_t timer_id, uint32_t timeout_ticks, void * p_context);`  
+用法：用来启动计时器开始计时。第一个参数是定义的计时器id，而第二个参数则是“计时时间”，实际上是振荡次数。一般使用宏`APP_TIMER_TICKS(1000)`将时间ms转化为振荡次数。第三个参数则是用来向计时超时中断处理函数传递参数，如果没有参数需要传递则可以写`NULL`。
 
 
 # 变量类型
