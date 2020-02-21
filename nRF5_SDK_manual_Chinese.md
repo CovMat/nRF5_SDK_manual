@@ -1,4 +1,21 @@
-# 需要手动添加的头文件位置（include PATH）
+# SDK自带工程模板修改经验
+## Log日志
+在调试程序时，需要打开日志查看输出信息。但程序最终发布时，可以关闭日志输出减小编译大小。日志功能的开关是`sdk_config.h`中的`nRF_Log`项目，将其下第一级的各项取消勾选即关闭日志输出。
+## timer定时器
+创建定时器时，需要在`timers_init`函数中使用`app_timer_create`函数。其中使用的变量需要在函数外部定义成全局变量。详情请查看下方`app_timer_create`函数的解释说明。
+## bsp板载支持
+自带工程模板里面对板载按键和LED灯进行了初始化。如果实际产品中蓝牙芯片没有连接按钮或是LED灯的话，可以将相关内容注释节省空间：  
+1. 注释`main`函数中的`buttons_leds_init(&erase_bonds);`一行  
+2. 在`sdk_config.h`中去掉`Board Support`->`BSP_BTN_BLE_ENABLED`的勾选
+## BLE协议栈初始化
+除了系统主时钟外，协议栈也必须设置一个低速的协议栈时钟。注意这里是一个大坑，如果实际产品没有贴片一个32.768KHZ的低速晶振，那在设置里就不可以设为使用外部晶振时钟，否则BLE无法广播。因此需要仔细确认产品的电路图。  
+在`sdk_config.h`->`nRF_SoftDevice`->`NRF_SDH_ENABLED`->`Clock`中进行时钟的设置。默认使用外部时钟，如果要改成内部时钟的话，  
+1. `NRF_SDH_CLOCK_LF_SRC`改为`NRF_SDH_CLOCK_LF_SRC_RC`
+2. `NRF_SDH_CLOCK_LF_RC_CTIV`设为`16` (nRF52推荐值)  
+3. `NRF_SDH_CLOCK_LF_RC_TEMP_CTIV`设为`2` (nRF52推荐值)  
+4. 第四项只对外部时钟有效
+
+# 自建工程时需要手动添加的头文件位置（include PATH）
 下面的头文件位置以nRF52840芯片，S140协议栈，SEGGER Embedded Studio开发环境为例。不同的芯片与协议栈要进行对应的修改。  
 首先在SEGGER的project->option->Common->Code->Build->Project Macros中，添加宏定义，设置SDK文件夹的位置：  
 ```
@@ -35,7 +52,7 @@ $(SDK_PATH)\integration\nrfx\legacy
 #include <app_uart.h>　// 串口UART相关
 ```
 
-# 需要手动添加的库文件
+# 自建工程时需要手动添加的库文件
 可以按需添加以下库文件：
 ```
 modules\nrfx\drivers\src\nrfx_gpiote.c (GPIOTE组件库)
