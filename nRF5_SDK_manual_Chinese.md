@@ -6,14 +6,29 @@
 ## bsp板载支持
 自带工程模板里面对板载按键和LED灯进行了初始化。如果实际产品中蓝牙芯片没有连接按钮或是LED灯的话，可以将相关内容注释节省空间：  
 1. 注释`main`函数中的`buttons_leds_init(&erase_bonds);`一行  
-2. 在`sdk_config.h`中去掉`Board Support`->`BSP_BTN_BLE_ENABLED`的勾选
+2. 在`sdk_config.h`中去掉`Board Support`->`BSP_BTN_BLE_ENABLED`的勾选  
 ## BLE协议栈初始化
 除了系统主时钟外，协议栈也必须设置一个低速的协议栈时钟。注意这里是一个大坑，如果实际产品没有贴片一个32.768KHZ的低速晶振，那在设置里就不可以设为使用外部晶振时钟，否则BLE无法广播。因此需要仔细确认产品的电路图。  
 在`sdk_config.h`->`nRF_SoftDevice`->`NRF_SDH_ENABLED`->`Clock`中进行时钟的设置。默认使用外部时钟，如果要改成内部时钟的话，  
-1. `NRF_SDH_CLOCK_LF_SRC`改为`NRF_SDH_CLOCK_LF_SRC_RC`
+1. `NRF_SDH_CLOCK_LF_SRC`改为`NRF_SDH_CLOCK_LF_SRC_RC`  
 2. `NRF_SDH_CLOCK_LF_RC_CTIV`设为`16` (nRF52推荐值)  
 3. `NRF_SDH_CLOCK_LF_RC_TEMP_CTIV`设为`2` (nRF52推荐值)  
-4. 第四项只对外部时钟有效
+4. 第四项只对外部时钟有效  
+
+此外，还应该设置主机和从机的数目，以及两个加起来的总连接数。在`sdk_config.h`->`nRF_SoftDevice`->`NRF_SDH_BLE_ENABLED`->`BLE stack configuration`中：  
+1. `NRF_SDH_BLE_PERIPHERAL_LINK_COUNT`作为从机，连接多少个主机？  
+2. `NRF_SDH_BLE_CENTRAL_LINK_COUNT`作为主机，连接多少个从机？  
+3. `NRF_SDH_BLE_TOTAL_LINK_COUNT`总连接数目，以上两者之和  
+4. `NRF_SDH_BLE_VS_UUID_COUNT`私有任务的总数  
+## GAP相关设置
+1. GAP安全设置，在`main.c`的`gap_params_init`函数中，找到`BLE_GAP_CONN_SEC_MODE_SET_OPEN`这个宏（默认不加密），将其修改为需要的其他宏。  
+2. 修改蓝牙广播名称，在`sd_ble_gap_device_name_set`函数中吗，找到名称的宏，直接修改  
+3. `main.c`中的宏`MIN_CONN_INTERVAL`和`MAX_CONN_INTERVAL`定义了最小和最大连接时间间隔。对于外接电源的设备来说，不考虑功耗的情况下可以尽量设小。  
+4. `SLAVE_LATENCY`这个宏定义了从机潜伏周期，越小功耗越高，数据传送约快。  
+5. `CONN_SUP_TIMEOUT`这个宏定义了连接超时时间。  
+## 广播设置
+在`main.c`的`advertising_init`函数中，将`init.config.ble_adv_fast_timeout`的值设为0，这样就可以实现保持快速广播模式不变，不进入IDLE无效模式。  
+
 
 # 自建工程时需要手动添加的头文件位置（include PATH）
 下面的头文件位置以nRF52840芯片，S140协议栈，SEGGER Embedded Studio开发环境为例。不同的芯片与协议栈要进行对应的修改。  
