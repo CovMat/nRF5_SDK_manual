@@ -1,3 +1,6 @@
+# SDK中自带的ble_app_uart_c例子修改经验
+
+
 # SDK自带工程模板修改经验
 ## Log日志
 在调试程序时，需要打开日志查看输出信息。但程序最终发布时，可以关闭日志输出减小编译大小。日志功能的开关是`sdk_config.h`中的`nRF_Log`项目，将其下第一级的各项取消勾选即关闭日志输出。
@@ -28,6 +31,7 @@
 5. `CONN_SUP_TIMEOUT`这个宏定义了连接超时时间。  
 ## 广播设置
 在`main.c`的`advertising_init`函数中，将`init.config.ble_adv_fast_timeout`的值设为0，这样就可以实现保持快速广播模式不变，不进入IDLE无效模式。  
+
 
 
 # 自建工程时需要手动添加的头文件位置（include PATH）
