@@ -1,7 +1,23 @@
 # SDK中自带的ble_app_uart_c例子修改经验
+## 滤波器的相关设定
+例子中只使用UUID滤波，如果想要使用NAME滤波的话，首先必须在`sdk_config.h`中打开相关的开关。  
+1. 进入`nRF_BLE`->`NRF_BLE_SCAN_ENABLED`，确保此项勾选。  
+2. 设置`NRF_BLE_SCAN_NAME_MAX_LEN`，即从机名字的最大长度。  
+3. 设置`NRF_BLE_SCAN_INTERVAL`，即扫描间隔。如果是外接电源，不考虑功耗的话，可以尽量设低一点。  
+4. 设置`NRF_BLE_SCAN_DURATION`。如果是外接电源的话，设置为0，表示一直持续扫描。  
+5. 勾选`NRF_BLE_SCAN_FILTER_ENABLE`，并将其下的`NRF_BLE_SCAN_UUID_CNT`和`NRF_BLE_SCAN_NAME_CNT`都设为1（只连接1台从机，获取1个服务数据的情况）。
+## bsp板载支持
+自带工程模板里面对板载按键和LED灯进行了初始化。如果实际产品中蓝牙芯片没有连接按钮或是LED灯的话，可以将相关内容注释节省空间：  
+1. 在`sdk_config.h`中去掉`Board Support`->`BSP_BTN_BLE_ENABLED`的勾选  
+2. 注释`main`函数中的`buttons_leds_init(&erase_bonds);`一行  
+3. 注释`buttons_leds_init`函数定义  
+4. 注释`scan_start`函数中的`ret = bsp_indication_set(BSP_INDICATE_SCANNING);`一行。  
+5. 注释`shutdown_handler`函数中的`bsp_indication_set`和`bsp_btn_ble_sleep_mode_prepare`两行。  
+6. 注释`ble_evt_handler`函数中的`bsp_indication_set`一行。  
+7. 注释`bsp_event_handler`整个函数定义。  
 
 
-# SDK自带工程模板修改经验
+# SDK自带从机工程模板修改经验
 ## Log日志
 在调试程序时，需要打开日志查看输出信息。但程序最终发布时，可以关闭日志输出减小编译大小。日志功能的开关是`sdk_config.h`中的`nRF_Log`项目，将其下第一级的各项取消勾选即关闭日志输出。
 ## timer定时器
