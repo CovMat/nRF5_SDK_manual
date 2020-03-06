@@ -3,7 +3,7 @@
 例子中只使用UUID滤波，如果想要使用NAME滤波的话，首先必须在`sdk_config.h`中打开相关的开关。  
 1. 进入`nRF_BLE`->`NRF_BLE_SCAN_ENABLED`，确保此项勾选。  
 2. 设置`NRF_BLE_SCAN_NAME_MAX_LEN`，即从机名字的最大长度。  
-3. 设置`NRF_BLE_SCAN_INTERVAL`，即扫描间隔。如果是外接电源，不考虑功耗的话，可以尽量设低一点。  
+3. 设置`NRF_BLE_SCAN_INTERVAL`，注意这一项的值不能小于`NRF_BLE_SCAN_WINDOW`，否则会报参数错误。前者表示扫描开始的间隔时间，后者表示每次扫描的持续时间。两个设置成一样的话，就能实现持续不间断扫描。  
 4. 设置`NRF_BLE_SCAN_DURATION`。如果是外接电源的话，设置为0，表示一直持续扫描。  
 5. 勾选`NRF_BLE_SCAN_FILTER_ENABLE`，并将其下的`NRF_BLE_SCAN_UUID_CNT`和`NRF_BLE_SCAN_NAME_CNT`都设为1（只连接1台从机，获取1个服务数据的情况）。
 ## bsp板载支持
@@ -15,6 +15,24 @@
 5. 注释`shutdown_handler`函数中的`bsp_indication_set`和`bsp_btn_ble_sleep_mode_prepare`两行。  
 6. 注释`ble_evt_handler`函数中的`bsp_indication_set`一行。  
 7. 注释`bsp_event_handler`整个函数定义。  
+## 关于特征值最大个数
+nRF52840芯片作为主机的时候，从机服务的特征值个数是有限制的。超过这个最大个数的特征值无法被主机发现。这个特征值的设置在`ble_gatt_db.h`的第60行，由宏`BLE_GATT_DB_MAX_CHARS`所定义。  
+## 关于nus Nordic UART Service服务的自定义修改
+工程例子中，使用nus服务进行主机从机之间的蓝牙数据传输。但实际产品所连接的从机，大多数都是用自定义的服务发送数据，因此需要对SDK中自带的nus服务做一些修改，使它更加通用。  
+1. 不建议直接修改SDK的源代码，推荐将`ble_nus_c.h`以及`ble_nus_c.c`两个文件复制到`main.c`所在的文件夹后，改名，再修改这个副本。`ble_nus_c.h`移动到`sdk_config.h`所在的目录。  
+2. 在SEGGER工程中，在头文件位置中删去`ble_nus_c.h`所在的目录：  
+在project->option->Common->Code->Preprocessor->User Include Directories中，删除`../../../../../../components/ble/ble_services/ble_nus`以及`../../../../../../components/ble/ble_services/ble_nus_c`
+3. 在SEGGER左侧的`project Explorer`中，找到`nRF_BLE_Service`->`ble_nus_c.c`，将其移除出工程，并添加刚才复制过来的副本。  
+4. 同样在`Application`中，添加`ble_nus_c.h`的副本，并且把代码中所有`#include "ble_nus_c.h"`的语句，全部修改为副本的名字。  
+## BLE协议栈初始化
+除了系统主时钟外，协议栈也必须设置一个低速的协议栈时钟。注意这里是一个大坑，如果实际产品没有贴片一个32.768KHZ的低速晶振，那在设置里就不可以设为使用外部晶振时钟，否则BLE无法广播。因此需要仔细确认产品的电路图。  
+在`sdk_config.h`->`nRF_SoftDevice`->`NRF_SDH_ENABLED`->`Clock`中进行时钟的设置。默认使用外部时钟，如果要改成内部时钟的话，  
+1. `NRF_SDH_CLOCK_LF_SRC`改为`NRF_SDH_CLOCK_LF_SRC_RC`  
+2. `NRF_SDH_CLOCK_LF_RC_CTIV`设为`16` (nRF52推荐值)  
+3. `NRF_SDH_CLOCK_LF_RC_TEMP_CTIV`设为`2` (nRF52推荐值)  
+4. `NRF_SDH_CLOCK_LF_ACCURACY`设为`500 ppm`   
+## nRF5_SDK_16.0.0_98a08e2 里的bug修正
+找到该版本的SDK中的`ble_advdata.c`文件，再定位到函数`ble_advdata_short_name_find`。将里面的`parsed_name_len < strlen(p_target_name)`修改为`parsed_name_len <= strlen(p_target_name)`。否则当广播包中的短名称与事先设定的欲连接短名称相同时，函数会认为不匹配，从而无法连接从机。如果想要实现广播包短名称与目标短名称完全一致时匹配成功，则应该改为等号`=`。
 
 
 # SDK自带从机工程模板修改经验
@@ -32,7 +50,7 @@
 1. `NRF_SDH_CLOCK_LF_SRC`改为`NRF_SDH_CLOCK_LF_SRC_RC`  
 2. `NRF_SDH_CLOCK_LF_RC_CTIV`设为`16` (nRF52推荐值)  
 3. `NRF_SDH_CLOCK_LF_RC_TEMP_CTIV`设为`2` (nRF52推荐值)  
-4. 第四项只对外部时钟有效  
+4. `NRF_SDH_CLOCK_LF_ACCURACY`设为`1`    
 
 此外，还应该设置主机和从机的数目，以及两个加起来的总连接数。在`sdk_config.h`->`nRF_SoftDevice`->`NRF_SDH_BLE_ENABLED`->`BLE stack configuration`中：  
 1. `NRF_SDH_BLE_PERIPHERAL_LINK_COUNT`作为从机，连接多少个主机？  
