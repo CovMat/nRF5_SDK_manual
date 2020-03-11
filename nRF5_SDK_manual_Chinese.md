@@ -35,7 +35,7 @@ nRF52840芯片作为主机的时候，从机服务的特征值个数是有限制
 在`nRF_Drivers`中添加看门狗功能的库文件`modules\nrfx\drivers\src\nrfx_wdt.c`，再在代码中增加相应的头文件`nrfx_wdt.h`，`nrf_drv_clock.h`。  
 在`sdk_config.h`->`nRF_Drivers`->`NRFX_CLOCK_ENABLED`中，确保其勾选。下一级的`NRFX_CLOCK_CONFIG_LF_SRC`，选择`RC`。  
 在`sdk_config.h`->`nRF_Drivers`->`NRFX_WDT_ENABLED`中，确保其勾选。其下的项目，分别选择`Run in SLEEP,Pause in HALT`，`30000`（30s喂狗时间上限）  
-
+在`sdk_config.h`->`nRF_Drivers`->`WDT_ENABLED`中，确保其勾选。其下的项目，使用与前面一样的选择。  
 
 
 # SDK自带从机工程模板修改经验
