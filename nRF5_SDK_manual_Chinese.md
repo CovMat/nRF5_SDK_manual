@@ -1,11 +1,11 @@
 # SDK中自带的ble_app_uart_c例子修改经验
-## 滤波器的相关设定
-例子中只使用UUID滤波，如果想要使用NAME滤波的话，首先必须在`sdk_config.h`中打开相关的开关。  
+## 过滤器的相关设定
+例子中只使用UUID过滤器，如果想要使用其他过滤器的话，首先必须在`sdk_config.h`中打开相关的开关。  
 1. 进入`nRF_BLE`->`NRF_BLE_SCAN_ENABLED`，确保此项勾选。  
-2. 设置`NRF_BLE_SCAN_NAME_MAX_LEN`，即从机名字的最大长度。  
+2. 设置`NRF_BLE_SCAN_SHORT_NAME_MAX_LEN`，即从机短名字的最大长度。  
 3. 设置`NRF_BLE_SCAN_INTERVAL`，注意这一项的值不能小于`NRF_BLE_SCAN_WINDOW`，否则会报参数错误。前者表示扫描开始的间隔时间，后者表示每次扫描的持续时间。两个设置成一样的话，就能实现持续不间断扫描。  
 4. 设置`NRF_BLE_SCAN_DURATION`。如果是外接电源的话，设置为0，表示一直持续扫描。  
-5. 勾选`NRF_BLE_SCAN_FILTER_ENABLE`，并将其下的`NRF_BLE_SCAN_UUID_CNT`和`NRF_BLE_SCAN_NAME_CNT`都设为1（只连接1台从机，获取1个服务数据的情况）。
+5. 勾选`NRF_BLE_SCAN_FILTER_ENABLE`，并将其下的`NRF_BLE_SCAN_SHORT_NAME_CNT`和`NRF_BLE_SCAN_ADDRESS_CNT`都设为1。
 ## bsp板载支持
 自带工程模板里面对板载按键和LED灯进行了初始化。如果实际产品中蓝牙芯片没有连接按钮或是LED灯的话，可以将相关内容注释节省空间：  
 1. 在`sdk_config.h`中去掉`Board Support`->`BSP_BTN_BLE_ENABLED`的勾选  
@@ -31,8 +31,11 @@ nRF52840芯片作为主机的时候，从机服务的特征值个数是有限制
 2. `NRF_SDH_CLOCK_LF_RC_CTIV`设为`16` (nRF52推荐值)  
 3. `NRF_SDH_CLOCK_LF_RC_TEMP_CTIV`设为`2` (nRF52推荐值)  
 4. `NRF_SDH_CLOCK_LF_ACCURACY`设为`500 ppm`   
-## nRF5_SDK_16.0.0_98a08e2 里的bug修正
-找到该版本的SDK中的`ble_advdata.c`文件，再定位到函数`ble_advdata_short_name_find`。将里面的`parsed_name_len < strlen(p_target_name)`修改为`parsed_name_len <= strlen(p_target_name)`。否则当广播包中的短名称与事先设定的欲连接短名称相同时，函数会认为不匹配，从而无法连接从机。如果想要实现广播包短名称与目标短名称完全一致时匹配成功，则应该改为等号`=`。
+## 添加看门狗功能
+在`nRF_Drivers`中添加看门狗功能的库文件`modules\nrfx\drivers\src\nrfx_wdt.c`，再在代码中增加相应的头文件`nrfx_wdt.h`，`nrf_drv_clock.h`。  
+在`sdk_config.h`->`nRF_Drivers`->`NRFX_CLOCK_ENABLED`中，确保其勾选。下一级的`NRFX_CLOCK_CONFIG_LF_SRC`，选择`RC`。  
+在`sdk_config.h`->`nRF_Drivers`->`NRFX_WDT_ENABLED`中，确保其勾选。其下的项目，分别选择`Run in SLEEP,Pause in HALT`，`30000`（30s喂狗时间上限）  
+
 
 
 # SDK自带从机工程模板修改经验
